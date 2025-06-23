@@ -79,19 +79,46 @@ int contar_runs() {
     return count;
 }
 
-void limpar_runs(const char *nome_base_run, int num_runs) {
-    printf("\nETAPA 3: Limpando arquivos temporários...\n");
-    for (int i = 0; i < num_runs; i++) {
-        char nome_arquivo_run[32];
-        sprintf(nome_arquivo_run, "%s%d.txt", nome_base_run, i);
+void remover_temporarios() {
+    DIR* dir = opendir(".");
+    if (!dir) {
+        perror("Erro ao abrir diretório");
+        return;
+    }
 
-        if (remove(nome_arquivo_run) == 0) {
-            // Sucesso, pode opcionalmente imprimir uma mensagem de depuração
-            // printf("Arquivo removido: %s\n", nome_arquivo_run);
-        } else {
-            // Falha, imprime um erro
-            fprintf(stderr, "Erro ao remover o arquivo: %s\n", nome_arquivo_run);
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (strncmp(entry->d_name, "run", 3) == 0 && strstr(entry->d_name, ".txt")) {
+            remove(entry->d_name);
+        } else if (strncmp(entry->d_name, "temp_", 5) == 0 && strstr(entry->d_name, ".txt")) {
+            remove(entry->d_name);
         }
     }
-    printf("=> Limpeza concluída.\n");
+
+    closedir(dir);
+}
+
+int verificar_ordenacao(const char* arquivo_saida) {
+    FILE* f = fopen(arquivo_saida, "r");
+    if (!f) {
+        perror("Erro ao abrir arquivo de saída para verificação");
+        return 0;
+    }
+
+    int atual, anterior;
+    if (fscanf(f, "%d", &anterior) != 1) {
+        fclose(f);
+        return 1; // arquivo vazio é considerado ordenado
+    }
+
+    while (fscanf(f, "%d", &atual) == 1) {
+        if (atual < anterior) {
+            fclose(f);
+            return 0;
+        }
+        anterior = atual;
+    }
+
+    fclose(f);
+    return 1;
 }

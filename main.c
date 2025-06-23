@@ -15,5 +15,14 @@ int main() {
     intercalar_runs(arquivo_saida, total_runs);
     printf("Arquivo final ordenado salvo como '%s'\n", arquivo_saida);
 
+    if (verificar_ordenacao("saida.txt")){
+        printf("✅ Arquivo final está ordenado corretamente.\n");
+    }else{
+        printf("❌ Arquivo final NÃO está ordenado corretamente.\n");
+    }
+
+    remover_temporarios(); // limpa runs e arquivos intermediários
+
+
     return 0;
 }
