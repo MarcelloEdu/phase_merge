@@ -4,101 +4,109 @@
 #include "run.h"
 #include "utils.h" // Inclui para ter acesso ao heapsort() e trocar()
 
-int gerar_runs(const char* arquivo_entrada, int memoria_max_elementos, const char* nome_base_run) {
-    FILE* f_entrada = fopen(arquivo_entrada, "r");
-    if (!f_entrada) {
-        perror("Erro ao abrir o arquivo de entrada");
-        return -1;
+void gerar_runs(const char* arquivo_entrada, int run_size) {
+    FILE* entrada = fopen(arquivo_entrada, "r");
+    if (!entrada) {
+        perror("Erro ao abrir arquivo de entrada");
+        return;
     }
 
-    int* buffer = (int*) malloc(memoria_max_elementos * sizeof(int));
+    int* buffer = malloc(run_size * sizeof(int));
     if (!buffer) {
-        perror("Falha ao alocar buffer de memória");
-        fclose(f_entrada);
-        return -1;
+        perror("Erro ao alocar memória para a run");
+        fclose(entrada);
+        return;
     }
 
-    int num_runs = 0;
-    int elementos_lidos = 0;
+    int run_index = 0;
+    int n_lidos;
 
-    // Lê o arquivo de entrada em pedaços
-    while ((elementos_lidos = fread(buffer, sizeof(int), memoria_max_elementos, f_entrada)) > 0) {
-        char nome_arquivo_run[64];
-        sprintf(nome_arquivo_run, "%s%d.txt", nome_base_run, num_runs);
+    while (!feof(entrada)) {
+        n_lidos = 0;
 
-        FILE* f_run = fopen(nome_arquivo_run, "w");
-        if (!f_run) {
+        for (int i = 0; i < run_size; i++) {
+            if (fscanf(entrada, "%d", &buffer[i]) == 1) {
+                n_lidos++;
+            } else {
+                break;
+            }
+        }
+
+        if (n_lidos == 0) break;
+
+        char nome_run[32];
+        gerar_nome_run(nome_run, run_index++);
+
+        FILE* run = fopen(nome_run, "w");
+        if (!run) {
             perror("Erro ao criar arquivo de run");
-            free(buffer);
-            fclose(f_entrada);
-            return -1;
+            break;
         }
 
-        // Escreve os elementos lidos no arquivo de run
-        for (int i = 0; i < elementos_lidos; i++) {
-            fprintf(f_run, "%d\n", buffer[i]);
+        for (int i = 0; i < n_lidos; i++) {
+            fprintf(run, "%d\n", buffer[i]);
         }
 
-        fclose(f_run);
-        num_runs++;
+        fclose(run);
     }
 
     free(buffer);
-    fclose(f_entrada);
-    return num_runs;
+    fclose(entrada);
 }
 
-int ordenar_runs(const char* arquivo_entrada, int memoria_max_elementos, const char* nome_base_run) {
-    // Primeiro, apenas divide o arquivo em runs menores
-    int num_runs = gerar_runs(arquivo_entrada, memoria_max_elementos, nome_base_run);
-    if (num_runs <= 0) {
-        return num_runs; // Retorna 0 ou -1 em caso de erro/vazio
-    }
+int ordenar_runs(const char* arquivo_entrada) {
+    // 1. Gera as runs brutas a partir do arquivo original
+    gerar_runs(arquivo_entrada, TAMANHO_RUN);
 
-    printf("=> %d runs geradas. Ordenando cada uma...\n", num_runs);
+    // 2. Conta quantas runs foram geradas
+    int total_runs = contar_runs();
 
-    // Aloca o buffer uma única vez para reutilização
-    int* buffer = (int*) malloc(memoria_max_elementos * sizeof(int));
+    // 3. Buffer para leitura dos dados
+    int* buffer = malloc(TAMANHO_RUN * sizeof(int));
     if (!buffer) {
-        perror("Falha ao alocar buffer para ordenação");
+        perror("Erro ao alocar memória para a run");
         return -1;
     }
 
-    // Agora, para cada run, carrega, ordena e salva
-    for (int i = 0; i < num_runs; i++) {
-        char nome_arquivo_run[64];
-        sprintf(nome_arquivo_run, "%s%d.txt", nome_base_run, i);
+    // 4. Abre, ordena e reescreve cada run
+    for (int i = 0; i < total_runs; i++) {
+        char nome_arquivo[32];
+        gerar_nome_run(nome_arquivo, i);
 
-        FILE* f_run = fopen(nome_arquivo_run, "r");
-        if (!f_run) {
-            fprintf(stderr, "Erro ao reabrir a run %s para ordenação.\n", nome_arquivo_run);
-            continue; // Pula para a próxima run em caso de erro
-        }
-
-        // Carrega todos os números da run para a memória
-        int elementos_lidos = 0;
-        while (elementos_lidos < memoria_max_elementos && fscanf(f_run, "%d", &buffer[elementos_lidos]) == 1) {
-            elementos_lidos++;
-        }
-        fclose(f_run);
-
-        // A MÁGICA ACONTECE AQUI: Ordena o buffer usando Heapsort
-        heapsort(buffer, elementos_lidos);
-
-        // Reabre o mesmo arquivo em modo de escrita para substituir o conteúdo
-        f_run = fopen(nome_arquivo_run, "w");
-        if (!f_run) {
-            fprintf(stderr, "Erro ao reabrir a run %s para escrita.\n", nome_arquivo_run);
+        FILE* run = fopen(nome_arquivo, "r");
+        if (!run) {
+            perror("Erro ao abrir run para ordenação");
             continue;
         }
 
-        // Salva os dados agora ordenados de volta no arquivo da run
-        for (int j = 0; j < elementos_lidos; j++) {
-            fprintf(f_run, "%d\n", buffer[j]);
+        int n_lidos = 0;
+        for (int j = 0; j < TAMANHO_RUN; j++) {
+            if (fscanf(run, "%d", &buffer[j]) == 1) {
+                n_lidos++;
+            } else {
+                break;
+            }
         }
-        fclose(f_run);
+
+        fclose(run);
+
+        // Ordena os dados da run
+        heapsort(buffer, n_lidos);
+
+        // Reabre o mesmo arquivo para sobrescrever
+        run = fopen(nome_arquivo, "w");
+        if (!run) {
+            perror("Erro ao reabrir run para sobrescrever");
+            continue;
+        }
+
+        for (int j = 0; j < n_lidos; j++) {
+            fprintf(run, "%d\n", buffer[j]);
+        }
+
+        fclose(run);
     }
 
     free(buffer);
-    return num_runs;
+    return total_runs;
 }
