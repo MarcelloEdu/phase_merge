@@ -9,36 +9,51 @@ void trocar(int* a, int* b) {
     *b = temp;
 }
 
-// Organiza o heap a partir do índice i
-void heapfy(int vetor[], int tam, int i) {
-    int maior = i;
-    int esq = 2 * i + 1;
-    int dir = 2 * i + 2;
+void heapfy(int arr[], int n, int i) {
+    int menor = i;
+    int esquerda = 2 * i + 1;
+    int direita = 2 * i + 2;
 
-    if (esq < tam && vetor[esq] > vetor[maior]) {
-        maior = esq;
+    // Verifica se o filho da esquerda é menor que a raiz
+    if (esquerda < n && arr[esquerda] < arr[menor]) {
+        menor = esquerda;
     }
 
-    if (dir < tam && vetor[dir] > vetor[maior]) {
-        maior = dir;
+    // Verifica se o filho da direita é menor que o menor até agora
+    if (direita < n && arr[direita] < arr[menor]) {
+        menor = direita;
     }
 
-    if (maior != i) {
-        trocar(&vetor[i], &vetor[maior]);
-        heapfy(vetor, tam, maior); // chamada recursiva
+    // Se o menor elemento não for a raiz, troca e continua a heapificação
+    if (menor != i) {
+        trocar(&arr[i], &arr[menor]);
+        heapfy(arr, n, menor);
     }
 }
 
-void heapsort(int* vetor, int tam) {
-    // Constrói o heap
-    for (int i = tam / 2 - 1; i >= 0; i--) {
-        heapfy(vetor, tam, i);
+void build_heap(int arr[], int n) {
+    int ultimo = (n/2) - 1; // Último nó não folha
+    for (int i = ultimo; i >= 0; i--) {
+        heapfy(arr, n, i);
+    }
+}
+
+void heapsort(int arr[], int n) {
+    // Etapa 1: Construir o heap
+    build_heap(arr, n);
+
+    // 2. Extrair elementos um por um da heap
+    for (int i = n - 1; i > 0; i--) {
+        // Move a raiz atual (menor elemento) para o fim
+        trocar(&arr[0], &arr[i]);
+
+        // Chama heapfy na heap reduzida
+        heapfy(arr, i, 0);
     }
 
-    // Extrai os elementos do heap um a um
-    for (int i = tam - 1; i > 0; i--) {
-        trocar(&vetor[0], &vetor[i]);
-        heapfy(vetor, i, 0);
+    //inverto o array para crescente
+    for (int i = 0; i < n / 2; i++) {
+        trocar(&arr[i], &arr[n - i - 1]);
     }
 }
 
@@ -62,4 +77,21 @@ int contar_runs() {
     }
 
     return count;
+}
+
+void limpar_runs(const char *nome_base_run, int num_runs) {
+    printf("\nETAPA 3: Limpando arquivos temporários...\n");
+    for (int i = 0; i < num_runs; i++) {
+        char nome_arquivo_run[32];
+        sprintf(nome_arquivo_run, "%s%d.txt", nome_base_run, i);
+
+        if (remove(nome_arquivo_run) == 0) {
+            // Sucesso, pode opcionalmente imprimir uma mensagem de depuração
+            // printf("Arquivo removido: %s\n", nome_arquivo_run);
+        } else {
+            // Falha, imprime um erro
+            fprintf(stderr, "Erro ao remover o arquivo: %s\n", nome_arquivo_run);
+        }
+    }
+    printf("=> Limpeza concluída.\n");
 }
